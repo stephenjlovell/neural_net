@@ -46,6 +46,14 @@ type Neuron struct {
   connections []*Connection
 }
 
+func (neuron *Neuron) Output() float64 {
+  return neuron.output
+}
+
+func (neuron *Neuron) OutputGradient() float64 {
+  return 0.0
+}
+
 func (neuron *Neuron) FeedForward() {
 
   sum := 0.0
@@ -53,10 +61,10 @@ func (neuron *Neuron) FeedForward() {
     sum += <-neuron.in
   }
 
-  output := neuron.activation(sum)
+  neuron.output = neuron.activation(sum)
 
   for _, conn := range neuron.connections {
-    conn.out <- (output * conn.weight * conn.delta)
+    conn.out <- (neuron.output * conn.weight * conn.delta)
   }
 }
 

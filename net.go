@@ -31,10 +31,10 @@ type Net struct {
 type Topology []uint
 type Data     []float64
 
-func (net *Net) FeedForward(d Data) {
+func (net *Net) FeedForward(input Data) {
   input_layer := net.layers[0]
   for i, neuron := range *input_layer {
-    neuron.output = d[i]
+    neuron.output = input[i]
   }
   for _, layer := range net.layers {
     for _, neuron := range *layer {
@@ -43,8 +43,30 @@ func (net *Net) FeedForward(d Data) {
   }
 }
 
-func (net *Net) BackPropegate(d Data) {
-  
+func (net *Net) OutputLayer() *Layer {
+  return net.layers[len(net.layers)-1]
+}
+
+func (net *Net) InputLayer() *Layer {
+  return net.layers[0]
+}
+
+func (net *Net) BackPropegate(target Data) {
+  // calculate net error (RMS)
+  err := 0.0
+  for i, neuron := range net.OutputLayer() {
+    delta := target[i] - neuron.Output()
+    err += (delta * delta)
+  }
+  err = math.Sqrt(err/float64(len(target))) // root mean square error (RMS)
+
+  // calculate output layer gradients
+
+  // calculate gradients on hidden layers
+
+  // update connection weights for all layers
+
+
 }
 
 func (net *Net) CalculateResults() Data {
