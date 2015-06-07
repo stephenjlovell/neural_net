@@ -36,7 +36,7 @@ func (net *Net) FeedForward(d Data) {
   for i, neuron := range *input_layer {
     neuron.output = d[i]
   }
-  for _, layer := range net.layers[1:] {
+  for _, layer := range net.layers {
     for _, neuron := range *layer {
       neuron.FeedForward()
     }
@@ -59,10 +59,11 @@ func NewNet(t Topology) *Net {
   net := &Net{
     layers: make([]*Layer, layer_count, layer_count),
   }
-  for i := 0; i < layer_count-1; i++ {
-    net.layers[i] = NewLayer(t[i], t[i+1])
+  net.layers[0] = NewLayer(0, t[0], t[1])
+  for i := 1; i < layer_count-1; i++ {
+    net.layers[i] = NewLayer(t[i-1], t[i], t[i+1])
   }
-  net.layers[layer_count-1] = NewLayer(t[layer_count-1], 0)
+  net.layers[layer_count-1] = NewLayer(t[layer_count-2], t[layer_count-1], 0)
 
   for i := layer_count-1; i > 0; i-- {
     receivers, senders := net.layers[i], net.layers[i-1]

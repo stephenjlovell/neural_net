@@ -24,35 +24,59 @@
 package NeuralNet
 
 import(
+  "math"
   "math/rand"
 )
 
 type Layer []*Neuron
 
-func NewLayer(size, next_size uint) *Layer {
+func NewLayer(previous_size, size, next_size uint) *Layer {
   layer := make(Layer, size, size)
   for i := uint(0); i < size; i++ {
-    layer[i] = NewNeuron(next_size)
+    layer[i] = NewNeuron(previous_size, next_size)
   }
   return &layer
 }
 
 
 type Neuron struct {
+  incoming uint
   in chan float64
   output float64
-  connections []Connection
+  connections []*Connection
 }
 
 func (neuron *Neuron) FeedForward() {
 
+  sum := 0.0
+  for i := uint(0); i < neuron.incoming; i++ {
+    sum += <-neuron.in
+  }
+
+  output := neuron.activation(sum)
+
+  for _, conn := range neuron.connections {
+    conn.out <- (output * conn.weight * conn.delta)
+  }
 }
 
-func NewNeuron(size uint) *Neuron {
+func (neuron *Neuron) activation(sum float64) float64 {
+  return (1.0 / (1.0 + math.Exp(-sum))) // sigmoid function
+}
+
+func (neuron *Neuron) activationDerivative(sum float64) float64 {
+  return math.Exp(sum) / math.Pow(1.0 + math.Exp(sum), 2.0)
+}
+
+
+
+func NewNeuron(previous_size, next_size uint) *Neuron {
   neuron := &Neuron{
-    connections: make([]Connection, size, size),
+    incoming: previous_size,
+    in: make(chan float64, previous_size),
+    connections: make([]*Connection, next_size, next_size),
   }
-  for i := uint(0); i < size; i++ {
+  for i := uint(0); i < next_size; i++ {
     neuron.connections[i] = NewConnection()
   }
   return neuron
@@ -65,11 +89,10 @@ type Connection struct {
   delta float64
 }
 
-func NewConnection() Connection {
-  return Connection{
-    out: make(chan float64),
+func NewConnection() *Connection {
+  return &Connection{
     weight: connection_weight(),
-    delta:  0,
+    delta:  1.0,
   }
 }
 
