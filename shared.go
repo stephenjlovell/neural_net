@@ -22,3 +22,10 @@
 //-----------------------------------------------------------------------------------
 
 package NeuralNet
+
+
+func assert(statement bool, failure_message string) {
+  if !statement {
+    panic("\nassertion failed: " + failure_message + "\n")
+  }
+}

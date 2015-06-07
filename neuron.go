@@ -39,8 +39,13 @@ func NewLayer(size, next_size uint) *Layer {
 
 
 type Neuron struct {
+  in chan float64
   output float64
   connections []Connection
+}
+
+func (neuron *Neuron) FeedForward() {
+
 }
 
 func NewNeuron(size uint) *Neuron {
@@ -55,15 +60,21 @@ func NewNeuron(size uint) *Neuron {
 
 
 type Connection struct {
+  out chan float64
   weight float64
   delta float64
 }
 
 func NewConnection() Connection {
   return Connection{
-    weight: rand.Float64(),
+    out: make(chan float64),
+    weight: connection_weight(),
     delta:  0,
   }
+}
+
+func connection_weight() float64 {
+  return rand.Float64()
 }
 
 

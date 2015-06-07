@@ -29,21 +29,33 @@ type Net struct {
 }
 
 type Topology []uint
+type Data     []float64
 
-func (net *Net) FeedForward() {
-
+func (net *Net) FeedForward(d Data) {
+  input_layer := net.layers[0]
+  for i, neuron := range *input_layer {
+    neuron.output = d[i]
+  }
+  for _, layer := range net.layers[1:] {
+    for _, neuron := range *layer {
+      neuron.FeedForward()
+    }
+  }
 }
 
-func (net *Net) BackPropegate() {
+func (net *Net) BackPropegate(d Data) {
   
 }
 
-func (net *Net) CalculateResults() {
-  
+func (net *Net) CalculateResults() Data {
+  return nil
 }
+
+
 
 func NewNet(t Topology) *Net {
   layer_count := len(t)
+  assert(layer_count >= 3, "Neural net must include at least one input, output, and hidden layer.")
   net := &Net{
     layers: make([]*Layer, layer_count, layer_count),
   }
@@ -51,6 +63,15 @@ func NewNet(t Topology) *Net {
     net.layers[i] = NewLayer(t[i], t[i+1])
   }
   net.layers[layer_count-1] = NewLayer(t[layer_count-1], 0)
+
+  for i := layer_count-1; i > 0; i-- {
+    receivers, senders := net.layers[i], net.layers[i-1]
+    for r, receiver := range *receivers {
+      for _, sender := range *senders {
+        sender.connections[r].out = receiver.in
+      }
+    }
+  }
 
   return net
 }
