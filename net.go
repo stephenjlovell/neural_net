@@ -47,10 +47,10 @@ func NewNet(t Topology) *Net {
   net := &Net{
     layers: make([]*Layer, layer_count, layer_count),
   }
-  for i, layer_size := range t {
-    layer := NewLayer(layer_size)
-    net.layers[i] = &layer
+  for i := 0; i < layer_count-1; i++ {
+    net.layers[i] = NewLayer(t[i], t[i+1])
   }
+  net.layers[layer_count-1] = NewLayer(t[layer_count-1], 0)
 
   return net
 }

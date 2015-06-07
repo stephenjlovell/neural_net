@@ -23,16 +23,48 @@
 
 package NeuralNet
 
-type Layer []Neuron
+import(
+  "math/rand"
+)
 
-func NewLayer(size uint) Layer {
-  return make(Layer, size, size)
+type Layer []*Neuron
+
+func NewLayer(size, next_size uint) *Layer {
+  layer := make(Layer, size, size)
+  for i := uint(0); i < size; i++ {
+    layer[i] = NewNeuron(next_size)
+  }
+  return &layer
 }
+
 
 type Neuron struct {
-
+  output float64
+  connections []Connection
 }
 
+func NewNeuron(size uint) *Neuron {
+  neuron := &Neuron{
+    connections: make([]Connection, size, size),
+  }
+  for i := uint(0); i < size; i++ {
+    neuron.connections[i] = NewConnection()
+  }
+  return neuron
+}
+
+
+type Connection struct {
+  weight float64
+  delta float64
+}
+
+func NewConnection() Connection {
+  return Connection{
+    weight: rand.Float64(),
+    delta:  0,
+  }
+}
 
 
 
