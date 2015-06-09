@@ -28,30 +28,68 @@ import(
   "math/rand"
 )
 
+const(
+  ALPHA = 0.5
+  ETA = 0.15
+)
+
 type Layer []*Neuron
 
 func NewLayer(previous_size, size, next_size uint) *Layer {
   layer := make(Layer, size, size)
   for i := uint(0); i < size; i++ {
     layer[i] = NewNeuron(previous_size, next_size)
+    layer[i].index = i
   }
   return &layer
 }
 
 
 type Neuron struct {
-  incoming uint
-  in chan float64
-  output float64
   connections []*Connection
+  in chan float64
+
+  incoming uint
+  index uint
+
+  output float64
+  gradient float64
+
+  eta float64 // net learning rate (0.0..1.0)
+  alpha float64 // momentum
 }
 
 func (neuron *Neuron) Output() float64 {
   return neuron.output
 }
 
-func (neuron *Neuron) OutputGradient() float64 {
-  return 0.0
+func (neuron *Neuron) outputGradient(target float64) {
+  neuron.gradient = (target - neuron.output) * neuron.activationDerivative(neuron.output)
+}
+
+func (neuron *Neuron) calcHiddenGradients(next_layer *Layer) {
+  neuron.gradient = neuron.sumDOW(next_layer) * neuron.activationDerivative(neuron.output)
+}
+
+func (neuron *Neuron) sumDOW(next_layer *Layer) float64 {
+  sum := 0.0
+  for i, n := range *next_layer {
+    sum += (neuron.connections[i].weight * n.gradient)
+  }
+  return sum
+}
+
+func (neuron *Neuron) updateInputWeights(prev_layer *Layer) {
+
+  for _, n := range *prev_layer {
+    old_delta_weight := n.connections[neuron.index].delta
+
+    new_delta_weight := (neuron.eta * n.output * neuron.gradient) + 
+      (neuron.alpha * old_delta_weight)
+
+    n.connections[neuron.index].delta = new_delta_weight
+  }
+
 }
 
 func (neuron *Neuron) FeedForward() {
@@ -80,6 +118,8 @@ func (neuron *Neuron) activationDerivative(sum float64) float64 {
 
 func NewNeuron(previous_size, next_size uint) *Neuron {
   neuron := &Neuron{
+    eta: ETA,
+    alpha: ALPHA,
     incoming: previous_size,
     in: make(chan float64, previous_size),
     connections: make([]*Connection, next_size, next_size),

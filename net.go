@@ -23,6 +23,10 @@
 
 package NeuralNet
 
+import(
+  "math"
+)
+
 type Net struct {
   layers []*Layer
 
@@ -43,34 +47,55 @@ func (net *Net) FeedForward(input Data) {
   }
 }
 
-func (net *Net) OutputLayer() *Layer {
-  return net.layers[len(net.layers)-1]
+func (net *Net) OutputLayer() Layer {
+  return *net.layers[len(net.layers)-1]
 }
 
-func (net *Net) InputLayer() *Layer {
-  return net.layers[0]
+func (net *Net) InputLayer() Layer {
+  return *net.layers[0]
 }
 
-func (net *Net) BackPropegate(target Data) {
+// func (net *Net) hiddenLayers() []*Layer {
+//   return net.layers[1:len(net.layers)-1]
+// }
+
+func (net *Net) Backpropegate(target Data) {
   // calculate net error (RMS)
   err := 0.0
-  for i, neuron := range net.OutputLayer() {
+  out_layer := net.OutputLayer()
+  for i, neuron := range out_layer {
     delta := target[i] - neuron.Output()
     err += (delta * delta)
   }
-  err = math.Sqrt(err/float64(len(target))) // root mean square error (RMS)
-
+  err = math.Sqrt(err/float64(len(target))) // RMS
   // calculate output layer gradients
-
+  for i, neuron := range out_layer {
+    neuron.outputGradient(target[i])
+  }
   // calculate gradients on hidden layers
-
+  for i := len(net.layers)-2; i > 0; i-- {
+    layer, next_layer := net.layers[i], net.layers[i+1]
+    for _, neuron := range *layer {
+      neuron.calcHiddenGradients(next_layer)
+    }
+  }
   // update connection weights for all layers
-
-
+  for i := len(net.layers)-1; i > 0; i-- {
+    layer, prev_layer := net.layers[i], net.layers[i-1]
+    for _, neuron := range *layer {
+      neuron.updateInputWeights(prev_layer)
+    }
+  }
 }
 
-func (net *Net) CalculateResults() Data {
-  return nil
+func (net *Net) GetResults() Data {
+  output_layer := net.OutputLayer()
+  l := len(output_layer)
+  data := make(Data, l, l)
+  for i, n := range output_layer {
+    data[i] = n.output
+  }
+  return data
 }
 
 
