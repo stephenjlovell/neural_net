@@ -24,6 +24,7 @@
 package NeuralNet
 
 import(
+  // "fmt"
   "math"
   "math/rand"
 )
@@ -92,6 +93,16 @@ func (neuron *Neuron) updateInputWeights(prev_layer *Layer) {
 
 }
 
+func (neuron *Neuron) FeedInitial(d float64) {
+
+  neuron.output = neuron.activation(d)
+  // fmt.Printf("%.3f -> %.3f\n", d, neuron.output)
+
+  for _, conn := range neuron.connections {
+    conn.out <- (neuron.output * conn.weight * conn.delta)
+  }
+}
+
 func (neuron *Neuron) FeedForward() {
 
   sum := 0.0
@@ -100,6 +111,7 @@ func (neuron *Neuron) FeedForward() {
   }
 
   neuron.output = neuron.activation(sum)
+  // fmt.Printf("%.3f -> %.3f\n", sum, neuron.output)
 
   for _, conn := range neuron.connections {
     conn.out <- (neuron.output * conn.weight * conn.delta)

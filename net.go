@@ -38,9 +38,9 @@ type Data     []float64
 func (net *Net) FeedForward(input Data) {
   input_layer := net.layers[0]
   for i, neuron := range *input_layer {
-    neuron.output = input[i]
+    neuron.FeedInitial(input[i])
   }
-  for _, layer := range net.layers {
+  for _, layer := range net.layers[1:] {
     for _, neuron := range *layer {
       neuron.FeedForward()
     }
@@ -54,10 +54,6 @@ func (net *Net) OutputLayer() Layer {
 func (net *Net) InputLayer() Layer {
   return *net.layers[0]
 }
-
-// func (net *Net) hiddenLayers() []*Layer {
-//   return net.layers[1:len(net.layers)-1]
-// }
 
 func (net *Net) Backpropegate(target Data) {
   // calculate net error (RMS)

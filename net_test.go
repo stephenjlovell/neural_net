@@ -26,19 +26,42 @@ package NeuralNet
 import(
   "fmt"
   "testing"
+  "math/rand"
 )
 
 func test_transform(d float64) float64 {
   return d * d
 }
 
+func test_data() float64 {
+  return rand.Float64()
+}
+
+func test_input(size int) Data {
+  input := make(Data, size, size)
+  for i, _ := range input {
+    input[i] = test_data()
+  }
+  return input
+}
+
+func test_target(input Data) Data {
+  l := len(input)
+  target := make(Data, l, l)
+  for i, d := range input {
+    target[i] = test_transform(d)
+  }
+  return target
+} 
+
 // verify the net can run a basic test without error.
 func TestNetSetup(t *testing.T) {
-  var topology = Topology{ 3, 2, 2, 1 }
+  l := uint(10)
 
-  var input = Data{1,2,3,4,5,6,7,8,9,10}
+  var topology = Topology{ l, l, l }
 
-  target := make(Data, len(input), len(input))
+  input := test_input(10)
+  target := test_target(input)
 
   for i := 0; i < len(input); i++ {
     target[i] = test_transform(input[i])
@@ -49,10 +72,16 @@ func TestNetSetup(t *testing.T) {
 
   net.FeedForward(input)
 
-  net.Backpropegate(target)
+  for i := 0; i < 1000; i++ {
+    net.Backpropegate(target)    
+  }
+
 
   results := net.GetResults()
-  fmt.Println(results)
+
+  for i := uint(0); i < l; i++ {
+    fmt.Printf("%.3f | %.3f | %.3f\n", input[i], target[i], results[i])
+  }
 
 }
 
