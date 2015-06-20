@@ -60,6 +60,20 @@ type Neuron struct {
   alpha float64 // momentum
 }
 
+func NewNeuron(previous_size, next_size uint) *Neuron {
+  neuron := &Neuron{
+    eta: ETA,
+    alpha: ALPHA,
+    incoming: previous_size,
+    in: make(chan float64, previous_size),
+    connections: make([]*Connection, next_size, next_size),
+  }
+  for i := uint(0); i < next_size; i++ {
+    neuron.connections[i] = NewConnection()
+  }
+  return neuron
+}
+
 func (neuron *Neuron) Output() float64 {
   return neuron.output
 }
@@ -81,38 +95,29 @@ func (neuron *Neuron) sumDOW(next_layer *Layer) float64 {
 }
 
 func (neuron *Neuron) updateInputWeights(prev_layer *Layer) {
-
   for _, n := range *prev_layer {
     old_delta_weight := n.connections[neuron.index].delta
-
     new_delta_weight := (neuron.eta * n.output * neuron.gradient) + 
       (neuron.alpha * old_delta_weight)
-
     n.connections[neuron.index].delta = new_delta_weight
   }
-
 }
 
 func (neuron *Neuron) FeedInitial(d float64) {
-
   neuron.output = neuron.activation(d)
   // fmt.Printf("%.3f -> %.3f\n", d, neuron.output)
-
   for _, conn := range neuron.connections {
     conn.out <- (neuron.output * conn.weight * conn.delta)
   }
 }
 
 func (neuron *Neuron) FeedForward() {
-
   sum := 0.0
   for i := uint(0); i < neuron.incoming; i++ {
     sum += <-neuron.in
   }
-
   neuron.output = neuron.activation(sum)
   // fmt.Printf("%.3f -> %.3f\n", sum, neuron.output)
-
   for _, conn := range neuron.connections {
     conn.out <- (neuron.output * conn.weight * conn.delta)
   }
@@ -123,24 +128,9 @@ func (neuron *Neuron) activation(sum float64) float64 {
 }
 
 func (neuron *Neuron) activationDerivative(sum float64) float64 {
-  return math.Exp(sum) / math.Pow(1.0 + math.Exp(sum), 2.0)
+  return math.Exp(sum) / math.Pow(1.0 + math.Exp(sum), 2.0) // derivative of sigmoid function
 }
 
-
-
-func NewNeuron(previous_size, next_size uint) *Neuron {
-  neuron := &Neuron{
-    eta: ETA,
-    alpha: ALPHA,
-    incoming: previous_size,
-    in: make(chan float64, previous_size),
-    connections: make([]*Connection, next_size, next_size),
-  }
-  for i := uint(0); i < next_size; i++ {
-    neuron.connections[i] = NewConnection()
-  }
-  return neuron
-}
 
 
 type Connection struct {
@@ -156,8 +146,8 @@ func NewConnection() *Connection {
   }
 }
 
-func connection_weight() float64 {
-  return rand.Float64()
+func connection_weight() float64 { // random weight [-1.0, 1]
+  return (rand.Float64() * 2.0) - 1.0
 }
 
 

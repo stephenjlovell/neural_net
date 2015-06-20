@@ -26,15 +26,40 @@ package NeuralNet
 import(
   "fmt"
   "testing"
+  "math"
   "math/rand"
 )
 
-func test_transform(d float64) float64 {
-  return d * d
+// verify the net can run a basic test without error.
+func TestNetSetup(t *testing.T) {
+  l := uint(10)
+
+  var topology = Topology{ l, l, l }
+
+  input := test_input(10)
+  target := test_target(input)
+
+  net := NewNet(topology)
+
+  net.FeedForward(input)
+
+
+  results := net.GetResults()
+
+  fmt.Println("Input | Output | Target")
+  for i := uint(0); i < l; i++ {
+    fmt.Printf("%.3f | %.3f | %.3f | %.3f\n", input[i], results[i], target[i], 
+               math.Abs(results[i] - target[i]))
+  }
 }
 
-func test_data() float64 {
-  return rand.Float64()
+
+func test_data() float64 { // random value [-1.0, 1.0]
+  return (rand.Float64() * 2.0) - 1.0
+}
+
+func test_transform(d float64) float64 {
+  return d * d
 }
 
 func test_input(size int) Data {
@@ -54,36 +79,7 @@ func test_target(input Data) Data {
   return target
 } 
 
-// verify the net can run a basic test without error.
-func TestNetSetup(t *testing.T) {
-  l := uint(10)
 
-  var topology = Topology{ l, l, l }
-
-  input := test_input(10)
-  target := test_target(input)
-
-  for i := 0; i < len(input); i++ {
-    target[i] = test_transform(input[i])
-  }
-
-
-  net := NewNet(topology)
-
-  net.FeedForward(input)
-
-  for i := 0; i < 1000; i++ {
-    net.Backpropegate(target)    
-  }
-
-
-  results := net.GetResults()
-
-  for i := uint(0); i < l; i++ {
-    fmt.Printf("%.3f | %.3f | %.3f\n", input[i], target[i], results[i])
-  }
-
-}
 
 
 

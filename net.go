@@ -27,13 +27,35 @@ import(
   "math"
 )
 
-type Net struct {
-  layers []*Layer
-
-}
-
 type Topology []uint
 type Data     []float64
+
+type Net struct {
+  layers []*Layer
+}
+
+func NewNet(t Topology) *Net {
+  layer_count := len(t)
+  assert(layer_count >= 3, "Neural net must include at least one input, output, and hidden layer.")
+  net := &Net{
+    layers: make([]*Layer, layer_count, layer_count),
+  }
+  net.layers[0] = NewLayer(0, t[0], t[1])  // input layer
+  for i := 1; i < layer_count-1; i++ {
+    net.layers[i] = NewLayer(t[i-1], t[i], t[i+1]) // hidden layers
+  }
+  net.layers[layer_count-1] = NewLayer(t[layer_count-2], t[layer_count-1], 0) // output layers
+
+  for i := layer_count-1; i > 0; i-- {
+    receivers, senders := net.layers[i], net.layers[i-1]
+    for r, receiver := range *receivers {
+      for _, sender := range *senders {
+        sender.connections[r].out = receiver.in
+      }
+    }
+  }
+  return net
+}
 
 func (net *Net) FeedForward(input Data) {
   input_layer := net.layers[0]
@@ -96,29 +118,6 @@ func (net *Net) GetResults() Data {
 
 
 
-func NewNet(t Topology) *Net {
-  layer_count := len(t)
-  assert(layer_count >= 3, "Neural net must include at least one input, output, and hidden layer.")
-  net := &Net{
-    layers: make([]*Layer, layer_count, layer_count),
-  }
-  net.layers[0] = NewLayer(0, t[0], t[1])
-  for i := 1; i < layer_count-1; i++ {
-    net.layers[i] = NewLayer(t[i-1], t[i], t[i+1])
-  }
-  net.layers[layer_count-1] = NewLayer(t[layer_count-2], t[layer_count-1], 0)
-
-  for i := layer_count-1; i > 0; i-- {
-    receivers, senders := net.layers[i], net.layers[i-1]
-    for r, receiver := range *receivers {
-      for _, sender := range *senders {
-        sender.connections[r].out = receiver.in
-      }
-    }
-  }
-
-  return net
-}
 
 
 
