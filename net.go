@@ -27,11 +27,19 @@ import(
   "math"
 )
 
+const (
+  SMOOTHING = 0.05
+)
+
 type Topology []uint
 type Data     []float64
 
 type Net struct {
   layers []*Layer
+  error float64
+  recent_avg_err float64
+  recent_avg_smoothing float64
+  first_run_complete bool
 }
 
 func NewNet(t Topology) *Net {
@@ -39,6 +47,7 @@ func NewNet(t Topology) *Net {
   assert(layer_count >= 3, "Neural net must include at least one input, output, and hidden layer.")
   net := &Net{
     layers: make([]*Layer, layer_count, layer_count),
+    recent_avg_smoothing: SMOOTHING,
   }
   net.layers[0] = NewLayer(0, t[0], t[1])  // input layer
   for i := 1; i < layer_count-1; i++ {
@@ -79,17 +88,26 @@ func (net *Net) InputLayer() Layer {
 
 func (net *Net) Backpropegate(target Data) {
   // calculate net error (RMS)
-  err := 0.0
+  net.error = 0.0
   out_layer := net.OutputLayer()
   for i, neuron := range out_layer {
     delta := target[i] - neuron.Output()
-    err += (delta * delta)
+    net.error += (delta * delta)
   }
-  err = math.Sqrt(err/float64(len(target))) // RMS
+  net.error = math.Sqrt(net.error/float64(len(out_layer))) // Root Mean Square Error
+
+  // exponential smoothing
+  if !net.first_run_complete {
+    net.recent_avg_err = net.error
+  }
+  net.recent_avg_err = ((1 - net.recent_avg_smoothing) * net.recent_avg_err) + 
+    (net.recent_avg_smoothing * net.error)
+
   // calculate output layer gradients
   for i, neuron := range out_layer {
-    neuron.outputGradient(target[i])
+    neuron.setOutputGradient(target[i])
   }
+
   // calculate gradients on hidden layers
   for i := len(net.layers)-2; i > 0; i-- {
     layer, next_layer := net.layers[i], net.layers[i+1]
@@ -104,6 +122,8 @@ func (net *Net) Backpropegate(target Data) {
       neuron.updateInputWeights(prev_layer)
     }
   }
+
+  net.first_run_complete = true
 }
 
 func (net *Net) GetResults() Data {

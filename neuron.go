@@ -26,7 +26,7 @@ package NeuralNet
 import(
   // "fmt"
   "math"
-  "math/rand"
+  // "math/rand"
 )
 
 const(
@@ -39,8 +39,7 @@ type Layer []*Neuron
 func NewLayer(previous_size, size, next_size uint) *Layer {
   layer := make(Layer, size, size)
   for i := uint(0); i < size; i++ {
-    layer[i] = NewNeuron(previous_size, next_size)
-    layer[i].index = i
+    layer[i] = NewNeuron(previous_size, next_size, i)
   }
   return &layer
 }
@@ -57,11 +56,12 @@ type Neuron struct {
   gradient float64
 
   eta float64 // net learning rate (0.0..1.0)
-  alpha float64 // momentum
+  alpha float64 // momentum (change in weight from previous training sample)
 }
 
-func NewNeuron(previous_size, next_size uint) *Neuron {
+func NewNeuron(previous_size, next_size, index uint) *Neuron {
   neuron := &Neuron{
+    index: index,
     eta: ETA,
     alpha: ALPHA,
     incoming: previous_size,
@@ -78,7 +78,7 @@ func (neuron *Neuron) Output() float64 {
   return neuron.output
 }
 
-func (neuron *Neuron) outputGradient(target float64) {
+func (neuron *Neuron) setOutputGradient(target float64) {
   neuron.gradient = (target - neuron.output) * neuron.activationDerivative(neuron.output)
 }
 
@@ -96,18 +96,22 @@ func (neuron *Neuron) sumDOW(next_layer *Layer) float64 {
 
 func (neuron *Neuron) updateInputWeights(prev_layer *Layer) {
   for _, n := range *prev_layer {
-    old_delta_weight := n.connections[neuron.index].delta
+    old_delta_weight := n.connections[neuron.index].delta_weight
+    
     new_delta_weight := (neuron.eta * n.output * neuron.gradient) + 
       (neuron.alpha * old_delta_weight)
-    n.connections[neuron.index].delta = new_delta_weight
+    
+    n.connections[neuron.index].delta_weight = new_delta_weight
+    n.connections[neuron.index].weight += new_delta_weight
+
   }
 }
 
 func (neuron *Neuron) FeedInitial(d float64) {
-  neuron.output = neuron.activation(d)
-  // fmt.Printf("%.3f -> %.3f\n", d, neuron.output)
+  // neuron.output = neuron.activation(d)
+  neuron.output = d
   for _, conn := range neuron.connections {
-    conn.out <- (neuron.output * conn.weight * conn.delta)
+    conn.out <- (neuron.output * conn.weight * conn.delta_weight)
   }
 }
 
@@ -119,16 +123,20 @@ func (neuron *Neuron) FeedForward() {
   neuron.output = neuron.activation(sum)
   // fmt.Printf("%.3f -> %.3f\n", sum, neuron.output)
   for _, conn := range neuron.connections {
-    conn.out <- (neuron.output * conn.weight * conn.delta)
+    conn.out <- (neuron.output * conn.weight * conn.delta_weight)
   }
 }
 
 func (neuron *Neuron) activation(sum float64) float64 {
-  return (1.0 / (1.0 + math.Exp(-sum))) // sigmoid function
+  // return (1.0 / (1.0 + math.Exp(-sum))) // sigmoid function
+
+  return math.Tanh(sum)  // hyperbolic tangent
 }
 
 func (neuron *Neuron) activationDerivative(sum float64) float64 {
-  return math.Exp(sum) / math.Pow(1.0 + math.Exp(sum), 2.0) // derivative of sigmoid function
+  // return math.Exp(sum) / math.Pow(1.0 + math.Exp(sum), 2.0) // derivative of sigmoid function
+
+  return 1.0 - (sum * sum)
 }
 
 
@@ -136,19 +144,17 @@ func (neuron *Neuron) activationDerivative(sum float64) float64 {
 type Connection struct {
   out chan float64
   weight float64
-  delta float64
+  delta_weight float64
 }
 
 func NewConnection() *Connection {
   return &Connection{
-    weight: connection_weight(),
-    delta:  1.0,
+    weight: random_weight(),
+    delta_weight:  1.0,
   }
 }
 
-func connection_weight() float64 { // random weight [-1.0, 1]
-  return (rand.Float64() * 2.0) - 1.0
-}
+
 
 
 

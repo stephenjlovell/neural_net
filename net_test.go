@@ -26,56 +26,69 @@ package NeuralNet
 import(
   "fmt"
   "testing"
-  "math"
-  "math/rand"
+  // "math"
+  // "math/rand"
 )
 
 // verify the net can run a basic test without error.
 func TestNetSetup(t *testing.T) {
-  l := uint(10)
+  l := uint(50)
 
-  var topology = Topology{ l, l, l }
-
-  input := test_input(10)
-  target := test_target(input)
-
+  var topology = Topology{ l, l, l, 1 }
   net := NewNet(topology)
 
-  net.FeedForward(input)
 
+  for run := 0; run <= 5000; run++ {
 
-  results := net.GetResults()
+    input := test_input(l)
+    target := test_target(input) // target values should be scaled to all lie within 
+                                 // range of Neuron's activation function    
+    net.FeedForward(input)
 
-  fmt.Println("Input | Output | Target")
-  for i := uint(0); i < l; i++ {
-    fmt.Printf("%.3f | %.3f | %.3f | %.3f\n", input[i], results[i], target[i], 
-               math.Abs(results[i] - target[i]))
+    net.Backpropegate(target)    
+
+    results := net.GetResults()
+
+    if run % 200 == 0 {
+
+      fmt.Printf("\nRun %d Error: %.4f Avg.Error: %.4f\n", run, net.error, net.recent_avg_err)  
+      fmt.Printf("Inputs: %.2v\n", input)
+      fmt.Printf("Target: %.2v\n", target)
+      fmt.Printf("Results: %.2v\n", results)
+    }
+
   }
+
+
+
+
+
 }
 
 
 func test_data() float64 { // random value [-1.0, 1.0]
-  return (rand.Float64() * 2.0) - 1.0
+  return random_weight()
 }
 
 func test_transform(d float64) float64 {
   return d * d
 }
 
-func test_input(size int) Data {
+func test_input(size uint) Data {
   input := make(Data, size, size)
-  for i, _ := range input {
+  for i := uint(0); i < size; i++ {
     input[i] = test_data()
   }
   return input
 }
 
 func test_target(input Data) Data {
-  l := len(input)
-  target := make(Data, l, l)
-  for i, d := range input {
-    target[i] = test_transform(d)
+  target := make(Data, 1)
+  sum := 0.0
+  for _, d := range input {
+    sum += d
   }
+  target[0] = (sum / float64(len(input)))
   return target
 } 
 

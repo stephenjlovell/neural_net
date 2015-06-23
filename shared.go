@@ -23,9 +23,17 @@
 
 package NeuralNet
 
+import (
+  "math/rand"
+)
+
 
 func assert(statement bool, failure_message string) {
   if !statement {
     panic("\nassertion failed: " + failure_message + "\n")
   }
+}
+
+func random_weight() float64 { // random weight [-1.0, 1]
+  return (rand.Float64() * 2.0) - 1.0
 }
