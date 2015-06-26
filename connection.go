@@ -23,62 +23,19 @@
 
 package NeuralNet
 
-import (
-	"fmt"
-	"testing"
-)
+type Connection struct {
+	out          chan float64
+	weight       float64
+	delta_weight float64
+}
 
-// verify the net can run a basic test without error.
-func TestNetSetup(t *testing.T) {
-	l := uint(100)
-
-	var topology = Topology{l, l, l, 1}
-	net := NewNet(topology)
-  net.Start()
-
-	for run := 0; run <= 5000; run++ {
-
-		input := test_input(l)
-		target := test_target(input) // target values should be scaled to all lie within
-		// range of Neuron's activation function
-		net.FeedForward(input)
-
-		net.Backpropegate(target)
-
-		results := net.GetResults()
-
-		if run%200 == 0 {
-			fmt.Printf("\nRun %d Error: %.4f Avg.Error: %.4f\n", run, net.error, net.recent_avg_err)
-			fmt.Printf("Inputs: %.2v\n", input)
-			fmt.Printf("Target: %.2v\n", target)
-			fmt.Printf("Results: %.2v\n", results)
-		}
-
+func NewConnection() *Connection {
+	return &Connection{
+		weight:       random_weight(),
+		delta_weight: 1.0,
 	}
 }
 
-func test_data() float64 { // random value [-1.0, 1.0]
-	return random_weight()
-}
-
-func test_transform(d float64) float64 {
-	return d * d
-}
-
-func test_input(size uint) Data {
-	input := make(Data, size, size)
-	for i := uint(0); i < size; i++ {
-		input[i] = test_data()
-	}
-	return input
-}
-
-func test_target(input Data) Data { // returns the mean of the input values.
-	target := make(Data, 1)
-	sum := 0.0
-	for _, d := range input {
-		sum += d
-	}
-	target[0] = (sum / float64(len(input)))
-	return target
+func (conn *Connection) Send(output float64) {
+	conn.out <- (output * conn.weight * conn.delta_weight)
 }

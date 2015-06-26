@@ -77,20 +77,12 @@ func (neuron *Neuron) Output() float64 {
 	return neuron.output
 }
 
-func (neuron *Neuron) setOutputGradient(target float64) {
+func (neuron *Neuron) setOutputLayerGradients(target float64) {
 	neuron.gradient = (target - neuron.output) * neuron.activationDerivative(neuron.output)
 }
 
-func (neuron *Neuron) calcHiddenGradients(next_layer *Layer) {
+func (neuron *Neuron) setHiddenLayerGradients(next_layer *Layer) {
 	neuron.gradient = neuron.sumDOW(next_layer) * neuron.activationDerivative(neuron.output)
-}
-
-func (neuron *Neuron) sumDOW(next_layer *Layer) float64 {
-	sum := 0.0
-	for i, n := range *next_layer {
-		sum += (neuron.connections[i].weight * n.gradient)
-	}
-	return sum
 }
 
 func (neuron *Neuron) updateInputWeights(prev_layer *Layer) {
@@ -102,7 +94,6 @@ func (neuron *Neuron) updateInputWeights(prev_layer *Layer) {
 
 		n.connections[neuron.index].delta_weight = new_delta_weight
 		n.connections[neuron.index].weight += new_delta_weight
-
 	}
 }
 
@@ -114,44 +105,35 @@ func (neuron *Neuron) FeedInitial(d float64) {
 }
 
 func (neuron *Neuron) FeedForward() {
-
 	go func() {
-    for {
-      sum := 0.0
-      for i := uint(0); i < neuron.incoming; i++ {
-        sum += <-neuron.in
-      }
-      neuron.output = neuron.activation(sum)
+		for {
+			sum := 0.0
+			for i := uint(0); i < neuron.incoming; i++ {
+				sum += <-neuron.in
+			}
+			neuron.output = neuron.activation(sum)
 
-      for _, conn := range neuron.connections {
-        conn.out <- (neuron.output * conn.weight * conn.delta_weight)
-      } 
-    }
+			for _, conn := range neuron.connections {
+				conn.Send(neuron.output)
+			}
+		}
 	}()
-
 }
 
 func (neuron *Neuron) activation(sum float64) float64 {
 	// return (1.0 / (1.0 + math.Exp(-sum))) // sigmoid function
-
 	return math.Tanh(sum) // hyperbolic tangent
 }
 
 func (neuron *Neuron) activationDerivative(sum float64) float64 {
 	// return math.Exp(sum) / math.Pow(1.0 + math.Exp(sum), 2.0) // derivative of sigmoid function
-
 	return 1.0 - (sum * sum)
 }
 
-type Connection struct {
-	out          chan float64
-	weight       float64
-	delta_weight float64
-}
-
-func NewConnection() *Connection {
-	return &Connection{
-		weight:       random_weight(),
-		delta_weight: 1.0,
+func (neuron *Neuron) sumDOW(next_layer *Layer) float64 {
+	sum := 0.0
+	for i, n := range *next_layer {
+		sum += (neuron.connections[i].weight * n.gradient)
 	}
+	return sum
 }

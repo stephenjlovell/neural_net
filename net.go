@@ -67,11 +67,11 @@ func NewNet(t Topology) *Net {
 }
 
 func (net *Net) Start() {
-  for _, layer := range net.layers[1:] { // begin listening for signals from input layer
-    for _, neuron := range *layer {
-      neuron.FeedForward()
-    }
-  }
+	for _, layer := range net.layers[1:] { // begin listening for signals from input layer
+		for _, neuron := range *layer {
+			neuron.FeedForward()
+		}
+	}
 }
 
 func (net *Net) FeedForward(input Data) {
@@ -90,14 +90,14 @@ func (net *Net) InputLayer() Layer {
 }
 
 func (net *Net) Backpropegate(target Data) {
-	// calculate net error (RMS)
+	// calculate net error
 	net.error = 0.0
 	out_layer := net.OutputLayer()
 	for i, neuron := range out_layer {
 		delta := target[i] - neuron.Output()
 		net.error += (delta * delta)
 	}
-	net.error = math.Sqrt(net.error / float64(len(out_layer))) // Root Mean Square Error
+	net.error = math.Sqrt(net.error / float64(len(out_layer))) // Root Mean Square (RMS) error
 
 	// exponential smoothing
 	if !net.first_run_complete {
@@ -108,14 +108,13 @@ func (net *Net) Backpropegate(target Data) {
 
 	// calculate output layer gradients
 	for i, neuron := range out_layer {
-		neuron.setOutputGradient(target[i])
+		neuron.setOutputLayerGradients(target[i])
 	}
-
 	// calculate gradients on hidden layers
 	for i := len(net.layers) - 2; i > 0; i-- {
 		layer, next_layer := net.layers[i], net.layers[i+1]
 		for _, neuron := range *layer {
-			neuron.calcHiddenGradients(next_layer)
+			neuron.setHiddenLayerGradients(next_layer)
 		}
 	}
 	// update connection weights for all layers
