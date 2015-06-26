@@ -30,24 +30,24 @@ import (
 
 // verify the net can run a basic test without error.
 func TestNetSetup(t *testing.T) {
-	l := uint(100)
+	l := uint(10)
 
 	var topology = Topology{l, l, l, 1}
 	net := NewNet(topology)
-  net.Start()
+	net.Start()
 
-	for run := 0; run <= 5000; run++ {
+	for run := 0; run <= 3000; run++ {
 
 		input := test_input(l)
 		target := test_target(input) // target values should be scaled to all lie within
 		// range of Neuron's activation function
-		net.FeedForward(input)
+		net.FeedForward(input) // race condition
 
 		net.Backpropegate(target)
 
 		results := net.GetResults()
 
-		if run%200 == 0 {
+		if run%150 == 0 || run == 0 {
 			fmt.Printf("\nRun %d Error: %.4f Avg.Error: %.4f\n", run, net.error, net.recent_avg_err)
 			fmt.Printf("Inputs: %.2v\n", input)
 			fmt.Printf("Target: %.2v\n", target)

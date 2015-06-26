@@ -24,13 +24,16 @@
 package NeuralNet
 
 type Connection struct {
+	owner        *Neuron
+	backprop     chan float64
 	out          chan float64
 	weight       float64
 	delta_weight float64
 }
 
-func NewConnection() *Connection {
+func NewConnection(neuron *Neuron) *Connection {
 	return &Connection{
+		owner:        neuron,
 		weight:       random_weight(),
 		delta_weight: 1.0,
 	}

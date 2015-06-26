@@ -25,6 +25,7 @@ package NeuralNet
 
 import (
 	"math"
+	"sync"
 )
 
 const (
@@ -35,31 +36,41 @@ type Topology []uint
 type Data []float64
 
 type Net struct {
-	layers               []*Layer
+	layers []*Layer
+	wg     sync.WaitGroup
+
 	error                float64
 	recent_avg_err       float64
 	recent_avg_smoothing float64
-	first_run_complete   bool
+
+	input_size  uint
+	output_size uint
+
+	first_run_complete bool
 }
 
 func NewNet(t Topology) *Net {
 	layer_count := len(t)
 	assert(layer_count >= 3, "Neural net must include at least one input, output, and hidden layer.")
 	net := &Net{
+		input_size:           t[0],
+		output_size:          t[layer_count-1],
 		layers:               make([]*Layer, layer_count, layer_count),
 		recent_avg_smoothing: SMOOTHING,
 	}
-	net.layers[0] = NewLayer(0, t[0], t[1]) // input layer
+	net.layers[0] = NewLayer(net, 0, t[0], t[1]) // input layer
 	for i := 1; i < layer_count-1; i++ {
-		net.layers[i] = NewLayer(t[i-1], t[i], t[i+1]) // hidden layers
+		net.layers[i] = NewLayer(net, t[i-1], t[i], t[i+1]) // hidden layers
 	}
-	net.layers[layer_count-1] = NewLayer(t[layer_count-2], t[layer_count-1], 0) // output layers
+	net.layers[layer_count-1] = NewLayer(net, t[layer_count-2], t[layer_count-1], 0) // output layers
 
 	for i := layer_count - 1; i > 0; i-- {
 		receivers, senders := net.layers[i], net.layers[i-1]
 		for r, receiver := range *receivers {
-			for _, sender := range *senders {
-				sender.connections[r].out = receiver.in
+			for s, sender := range *senders {
+				sender.connections_out[r].out = receiver.in
+				receiver.connections_in[s] = sender.connections_out[r]
+				receiver.connections_in[s].backprop = sender.backprop
 			}
 		}
 	}
@@ -67,18 +78,25 @@ func NewNet(t Topology) *Net {
 }
 
 func (net *Net) Start() {
-	for _, layer := range net.layers[1:] { // begin listening for signals from input layer
+	for i, layer := range net.layers[1:] { // begin listening for signals from input layer
 		for _, neuron := range *layer {
 			neuron.FeedForward()
+			if i == 0 {
+				neuron.setFirstHiddenLayerGradients()
+			} else if i < len(net.layers)-2 {
+				neuron.setHiddenLayerGradients()
+			}
 		}
 	}
 }
 
 func (net *Net) FeedForward(input Data) {
-	input_layer := net.layers[0]
-	for i, neuron := range *input_layer {
+	assert(net.input_size == uint(len(input)), "input data size mismatch")
+	net.wg.Add(int(net.output_size))
+	for i, neuron := range *net.layers[0] {
 		neuron.FeedInitial(input[i])
 	}
+	net.wg.Wait()
 }
 
 func (net *Net) OutputLayer() Layer {
@@ -106,25 +124,18 @@ func (net *Net) Backpropegate(target Data) {
 	net.recent_avg_err = ((1 - net.recent_avg_smoothing) * net.recent_avg_err) +
 		(net.recent_avg_smoothing * net.error)
 
-	// calculate output layer gradients
+	// calculate gradients
+	net.wg.Add(len(*net.layers[1]))
 	for i, neuron := range out_layer {
 		neuron.setOutputLayerGradients(target[i])
 	}
-	// calculate gradients on hidden layers
-	for i := len(net.layers) - 2; i > 0; i-- {
-		layer, next_layer := net.layers[i], net.layers[i+1]
-		for _, neuron := range *layer {
-			neuron.setHiddenLayerGradients(next_layer)
-		}
-	}
+	net.wg.Wait() // wait for all hidden layers to finish updating their gradients.
 	// update connection weights for all layers
 	for i := len(net.layers) - 1; i > 0; i-- {
-		layer, prev_layer := net.layers[i], net.layers[i-1]
-		for _, neuron := range *layer {
-			neuron.updateInputWeights(prev_layer)
+		for _, neuron := range *net.layers[i] {
+			neuron.updateInputWeights()
 		}
 	}
-
 	net.first_run_complete = true
 }
 
