@@ -1,5 +1,4 @@
 //-----------------------------------------------------------------------------------
-// ♛ GopherCheck ♛
 // Copyright © 2015 Stephen J. Lovell
 //-----------------------------------------------------------------------------------
 //
@@ -25,6 +24,7 @@ package NeuralNet
 
 import (
 	"math"
+	"runtime"
 	"sync"
 )
 
@@ -50,6 +50,9 @@ type Net struct {
 }
 
 func NewNet(t Topology) *Net {
+
+	runtime.GOMAXPROCS(runtime.NumCPU()) // set maximum number of parallel executing goroutines.
+
 	layer_count := len(t)
 	assert(layer_count >= 3, "Neural net must include at least one input, output, and hidden layer.")
 	net := &Net{
@@ -78,11 +81,11 @@ func NewNet(t Topology) *Net {
 }
 
 func (net *Net) Start() {
-	for i, layer := range net.layers[1:] { // begin listening for signals from input layer
+	for i, layer := range net.layers[1:] {
 		for _, neuron := range *layer {
-			neuron.FeedForward()
+			neuron.FeedForward() // begin listening for signals from previous layer
 			if i == 0 {
-				neuron.setFirstHiddenLayerGradients()
+				neuron.setFirstHiddenLayerGradients() // backpropegate training signals
 			} else if i < len(net.layers)-2 {
 				neuron.setHiddenLayerGradients()
 			}

@@ -1,5 +1,4 @@
 //-----------------------------------------------------------------------------------
-// ♛ GopherCheck ♛
 // Copyright © 2015 Stephen J. Lovell
 //-----------------------------------------------------------------------------------
 //
@@ -30,7 +29,7 @@ import (
 
 // verify the net can run a basic test without error.
 func TestNetSetup(t *testing.T) {
-	l := uint(10)
+	l := uint(100)
 
 	var topology = Topology{l, l, l, 1}
 	net := NewNet(topology)
